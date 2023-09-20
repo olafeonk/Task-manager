@@ -1,87 +1,262 @@
 basePath: /
 definitions:
-  main.RequestTask:
+  handler.errorResponse:
     properties:
-      due:
+      message:
         type: string
-      text:
+    type: object
+  handler.getAllTasksResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/task_manager.Task'
+        type: array
+    type: object
+  task_manager.CreateTaskInput:
+    properties:
+      name:
         type: string
+    required:
+    - name
+    type: object
+  task_manager.StatusEnd:
+    enum:
+    - START
+    - END
+    type: string
+    x-enum-varnames:
+    - Start
+    - End
+  task_manager.Task:
+    properties:
+      created_at:
+        type: string
+      end_task_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      status_end:
+        $ref: '#/definitions/task_manager.StatusEnd'
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  task_manager.UpdateTaskInput:
+    properties:
+      name:
+        type: string
+      status:
+        $ref: '#/definitions/task_manager.StatusEnd'
     type: object
 host: localhost:8080
 info:
-  contact:
-    email: support@swagger.io
-    name: API Support
-    url: http://www.swagger.io/support
-  description: This is a sample server Petstore server.
-  license:
-    name: Apache 2.0
-    url: http://www.apache.org/licenses/LICENSE-2.0.html
-  termsOfService: http://swagger.io/terms/
-  title: Swagger Example API
+  contact: {}
+  description: API Server for TaskManager Application
+  title: Task Manager API
   version: "1.0"
 paths:
-  /task/:
+  /api/tasks:
+    get:
+      consumes:
+      - application/json
+      description: get all tasks
+      operationId: get-all-tasks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.getAllTasksResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BasicAuth: []
+      summary: Get All Tasks
+      tags:
+      - tasks
     post:
-      description: Create one task
+      consumes:
+      - application/json
+      description: create task
+      operationId: create-task
       parameters:
-      - description: Add account
+      - description: task info
         in: body
-        name: task
+        name: input
         required: true
         schema:
-          $ref: '#/definitions/main.RequestTask'
+          $ref: '#/definitions/task_manager.CreateTaskInput'
+      produces:
+      - application/json
       responses:
         "200":
-          description: ok
+          description: OK
           schema:
-            type: string
+            type: integer
         "400":
-          description: error
+          description: Bad Request
           schema:
-            type: string
-      summary: Task
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BasicAuth: []
+      summary: Create task
       tags:
-      - Tasks
-  /task/{id}:
+      - tasks
+  /api/tasks/{id}:
     delete:
-      description: delete one task
+      consumes:
+      - application/json
+      description: delete task
+      operationId: delete-task
       parameters:
-      - description: Id
+      - description: Task ID
         in: path
         name: id
         required: true
         type: integer
+      produces:
+      - application/json
       responses:
         "200":
-          description: ok
+          description: OK
           schema:
             type: string
         "400":
-          description: error
+          description: Bad Request
           schema:
-            type: string
-      summary: Task
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BasicAuth: []
+      summary: Delete task
       tags:
-      - Tasks
+      - tasks
     get:
-      description: Get one task
+      consumes:
+      - application/json
+      description: get task by id
+      operationId: get-task-by-id
       parameters:
-      - description: Id
+      - description: Task ID
         in: path
         name: id
         required: true
         type: integer
+      produces:
+      - application/json
       responses:
         "200":
-          description: ok
+          description: OK
+          schema:
+            $ref: '#/definitions/task_manager.Task'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BasicAuth: []
+      summary: Get task By Id
+      tags:
+      - tasks
+    put:
+      consumes:
+      - application/json
+      description: update task
+      operationId: update-task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: task info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/task_manager.UpdateTaskInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
           schema:
             type: string
         "400":
-          description: error
+          description: Bad Request
           schema:
-            type: string
-      summary: Task
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BasicAuth: []
+      summary: Update task
       tags:
-      - Tasks
+      - tasks
+securityDefinitions:
+  BasicAuth:
+    type: basic
 swagger: "2.0"

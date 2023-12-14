@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"go.uber.org/zap"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -24,10 +26,15 @@ import (
 // @host localhost:8080
 // @BasePath /
 
-// @securityDefinitions.basic BasicAuth
 func main() {
 	//logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	//slog.SetDefault(logger)
+	zapConfig := zap.NewProductionConfig()
+	zapConfig.DisableCaller = true
+	zapConfig.Level.SetLevel(zap.DebugLevel)
+	logger, _ := zapConfig.Build()
+
+	http.Handle("/", handlerLog{logger})
 
 	if err := godotenv.Load(); err != nil {
 		slog.Error(fmt.Sprintf("error loading env variables: %s", err.Error()))
@@ -39,7 +46,6 @@ func main() {
 		Username: os.Getenv("POSTGRES_USER"),
 		Password: os.Getenv("POSTGRES_PASSWORD"),
 		DBName:   os.Getenv("POSTGRES_DB"),
-		SSLMode:  os.Getenv("POSTGRES_SSLMODE"),
 	})
 	if err != nil {
 		log.Fatalf("failed to initialize db: %s", err.Error())
@@ -72,4 +78,18 @@ func main() {
 		slog.Error(fmt.Sprintf("error occured on db connection close: %s", err.Error()))
 	}
 
+}
+
+type handlerLog struct {
+	logger *zap.Logger
+}
+
+func (h handlerLog) ServeHTTP(writer http.ResponseWriter, _ *http.Request) {
+	h.logger.Info(
+		"My log message",
+		zap.String("my-key", "my-value"),
+	)
+
+	writer.WriteHeader(200)
+	_, _ = writer.Write([]byte("Hello, world!"))
 }

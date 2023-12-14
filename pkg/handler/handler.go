@@ -20,15 +20,17 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	router := gin.New()
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	api := router.Group("/api", h.userIdentity)
+	api := router.Group("/api")
 	{
 		tasks := api.Group("/tasks")
 		{
 			tasks.POST("/", h.createTask)
-			tasks.GET("/", h.getAllTasks)
 			tasks.DELETE("/:id", h.deleteTask)
 			tasks.GET("/:id", h.getTaskById)
-			tasks.PUT("/:id", h.updateTask)
+		}
+		telegram := api.Group("/telegram")
+		{
+			telegram.GET("/:id", h.getTasksByTelegramId)
 		}
 	}
 	return router

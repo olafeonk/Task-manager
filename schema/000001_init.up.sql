@@ -1,17 +1,11 @@
-CREATE TABLE users
-(
-    id            serial       not null unique,
-    username      varchar(255) not null,
-    password_hash varchar(255) not null
-);
-
 CREATE TABLE tasks
 (
     id          serial                                      not null unique,
     created_at  timestamp                                   not null default CURRENT_TIMESTAMP,
     updated_at  timestamp                                   not null default CURRENT_TIMESTAMP,
-    user_id     int references users (id) on delete cascade not null,
-    name        varchar(200)                                not null,
+    telegram_id   varchar(20)  not null,
+    text        text not null,
+    start_time_at timestamp not null,
     status_end  text check ( status_end in ('START', 'END') ),
     end_task_at timestamp
 );
@@ -50,5 +44,3 @@ CREATE TRIGGER update_end_task_at
     FOR EACH ROW
     WHEN (NEW.status_end = 'END')
     EXECUTE PROCEDURE update_end_task_at_task();
-
-CREATE UNIQUE INDEX users_idx ON users (username, password_hash);

@@ -1,49 +1,67 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"io/ioutil"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"task_manager"
+	"time"
 )
 
 // @Summary Create task
-// @Security BasicAuth
 // @Tags tasks
 // @Description create task
 // @ID create-task
 // @Accept  json
 // @Produce  json
-// @Param input body task_manager.CreateTaskInput true "task info"
+// @Param input body task_manager.CreateTaskInputModer true "task info"
 // @Success 200 {integer} integer 1
 // @Failure 400,401 {object} errorResponse
 // @Failure 500 {object} errorResponse
 // @Failure default {object} errorResponse
 // @Router /api/tasks [post]
 func (h *Handler) createTask(c *gin.Context) {
-	userId, err := getUserId(c)
-	if err != nil {
-		newErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	slog.Info("start create task",
-		"user", userId)
+	var err error
+	slog.Info("start create task")
+	jsonDataBytes, err := ioutil.ReadAll(c.Request.Body)
+	slog.Info("data", jsonDataBytes)
+	unquoteJsonData := fmt.Sprintf("%s", jsonDataBytes)
+	slog.Info("unquote", unquoteJsonData)
+	unquoteJsonData = strings.ReplaceAll(unquoteJsonData, "+", " ")
+	unquoteJsonData = strings.ReplaceAll(unquoteJsonData, "%3A", ":")
+	slog.Info("unquote", unquoteJsonData)
+	fields := strings.Split(unquoteJsonData, "&")
+	var input task_manager.CreateTaskInputModeration
+	var inputTh task_manager.CreateTaskInput
 
-	var input task_manager.CreateTaskInput
-	if err := c.BindJSON(&input); err != nil {
-		newErrorResponse(c, http.StatusBadRequest, "validation error requires name field")
-		return
+	for _, field := range fields {
+		items := strings.Split(field, "=")
+		key := items[0]
+		value := items[1]
+		if key == "telegram_id" {
+			inputTh.TelegramId = value
+		}
+		if key == "text" {
+			inputTh.Text = value
+		}
+		if key == "start_time" {
+			inputTh.StartTime, err = time.Parse(time.DateTime, value)
+		}
 	}
 
-	id, err := h.services.TaskManagerTask.Create(userId, input)
+	slog.Info("task", input)
+	id, err := h.services.TaskManagerTask.Create(inputTh)
 	if err != nil {
 		newErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	slog.Info("create task success",
-		"user", userId,
+		"task", input,
 		"task", id,
 	)
 	c.JSON(http.StatusOK, map[string]interface{}{
@@ -56,41 +74,39 @@ type getAllTasksResponse struct {
 }
 
 // @Summary Get All Tasks
-// @Security BasicAuth
 // @Tags tasks
 // @Description get all tasks
 // @ID get-all-tasks
 // @Accept  json
 // @Produce  json
+// @Param id path int true "telegram ID"
 // @Success 200 {object} getAllTasksResponse
 // @Failure 400,404 {object} errorResponse
 // @Failure 500 {object} errorResponse
 // @Failure default {object} errorResponse
-// @Router /api/tasks [get]
-func (h *Handler) getAllTasks(c *gin.Context) {
-	userId, err := getUserId(c)
+// @Router /api/telegram/{id} [get]
+func (h *Handler) getTasksByTelegramId(c *gin.Context) {
+	slog.Info("start get all tasks")
+
+	telegramId, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		newErrorResponse(c, http.StatusBadRequest, "invalid id param")
+		return
+	}
+
+	tasks, err := h.services.TaskManagerTask.GetAll(telegramId)
 	if err != nil {
 		newErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	slog.Info("start get all tasks",
-		"user", userId)
 
-	tasks, err := h.services.TaskManagerTask.GetAll(userId)
-	if err != nil {
-		newErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	slog.Info("get all tasks success",
-		"user", userId)
+	slog.Info("get all tasks success")
 	c.JSON(http.StatusOK, getAllTasksResponse{
 		Data: tasks,
 	})
 }
 
 // @Summary Get task By Id
-// @Security BasicAuth
 // @Tags tasks
 // @Description get task by id
 // @ID get-task-by-id
@@ -103,78 +119,26 @@ func (h *Handler) getAllTasks(c *gin.Context) {
 // @Failure default {object} errorResponse
 // @Router /api/tasks/{id} [get]
 func (h *Handler) getTaskById(c *gin.Context) {
-	userId, err := getUserId(c)
-	if err != nil {
-		newErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	slog.Info("start get task by id",
-		"user", userId)
+	slog.Info("start get task by id")
 
-	id, err := strconv.Atoi(c.Param("id"))
+	taskId, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		newErrorResponse(c, http.StatusBadRequest, "invalid id param")
 		return
 	}
 
-	task, err := h.services.TaskManagerTask.GetById(userId, id)
+	task, err := h.services.TaskManagerTask.GetById(taskId)
 	if err != nil {
 		newErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	slog.Info("get task by id success",
-		"user", userId)
+		"task", taskId)
 	c.JSON(http.StatusOK, task)
 }
 
-// @Summary Update task
-// @Security BasicAuth
-// @Tags tasks
-// @Description update task
-// @ID update-task
-// @Accept  json
-// @Produce  json
-// @Param id path int true "Task ID"
-// @Param input body task_manager.UpdateTaskInput true "task info"
-// @Success 200 {string} 1
-// @Failure 400,404 {object} errorResponse
-// @Failure 500 {object} errorResponse
-// @Failure default {object} errorResponse
-// @Router /api/tasks/{id} [put]
-func (h *Handler) updateTask(c *gin.Context) {
-	userId, err := getUserId(c)
-	if err != nil {
-		newErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	slog.Info("start update task",
-		"user", userId)
-
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		newErrorResponse(c, http.StatusBadRequest, "invalid id param")
-		return
-	}
-
-	var input task_manager.UpdateTaskInput
-	if err := c.BindJSON(&input); err != nil {
-		newErrorResponse(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	if err := h.services.TaskManagerTask.Update(userId, id, input); err != nil {
-		newErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	slog.Info("update task success",
-		"user", userId)
-	c.JSON(http.StatusOK, statusResponse{"ok"})
-}
-
 // @Summary Delete task
-// @Security BasicAuth
 // @Tags tasks
 // @Description delete task
 // @ID delete-task
@@ -187,28 +151,22 @@ func (h *Handler) updateTask(c *gin.Context) {
 // @Failure default {object} errorResponse
 // @Router /api/tasks/{id} [delete]
 func (h *Handler) deleteTask(c *gin.Context) {
-	userId, err := getUserId(c)
-	if err != nil {
-		newErrorResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	slog.Info("start delete tasks",
-		"user", userId)
+	slog.Info("start delete tasks")
 
-	id, err := strconv.Atoi(c.Param("id"))
+	taskId, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		newErrorResponse(c, http.StatusBadRequest, "invalid id param")
 		return
 	}
 
-	err = h.services.TaskManagerTask.Delete(userId, id)
+	err = h.services.TaskManagerTask.Delete(taskId)
 	if err != nil {
 		newErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	slog.Info("delete task success",
-		"user", userId)
+		"task_id", taskId)
 	c.JSON(http.StatusOK, statusResponse{
 		Status: "ok",
 	})

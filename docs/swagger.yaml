@@ -14,10 +14,16 @@ definitions:
     type: object
   task_manager.CreateTaskInput:
     properties:
-      name:
+      start_time:
+        type: string
+      telegram_id:
+        type: string
+      text:
         type: string
     required:
-    - name
+    - start_time
+    - telegram_id
+    - text
     type: object
   task_manager.StatusEnd:
     enum:
@@ -35,21 +41,16 @@ definitions:
         type: string
       id:
         type: integer
-      name:
+      start_time_at:
         type: string
       status_end:
         $ref: '#/definitions/task_manager.StatusEnd'
+      telegram_id:
+        type: integer
+      text:
+        type: string
       updated_at:
         type: string
-      user_id:
-        type: integer
-    type: object
-  task_manager.UpdateTaskInput:
-    properties:
-      name:
-        type: string
-      status:
-        $ref: '#/definitions/task_manager.StatusEnd'
     type: object
 host: localhost:8080
 info:
@@ -59,39 +60,6 @@ info:
   version: "1.0"
 paths:
   /api/tasks:
-    get:
-      consumes:
-      - application/json
-      description: get all tasks
-      operationId: get-all-tasks
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.getAllTasksResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.errorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handler.errorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.errorResponse'
-        default:
-          description: ""
-          schema:
-            $ref: '#/definitions/handler.errorResponse'
-      security:
-      - BasicAuth: []
-      summary: Get All Tasks
-      tags:
-      - tasks
     post:
       consumes:
       - application/json
@@ -127,8 +95,6 @@ paths:
           description: ""
           schema:
             $ref: '#/definitions/handler.errorResponse'
-      security:
-      - BasicAuth: []
       summary: Create task
       tags:
       - tasks
@@ -167,8 +133,6 @@ paths:
           description: ""
           schema:
             $ref: '#/definitions/handler.errorResponse'
-      security:
-      - BasicAuth: []
       summary: Delete task
       tags:
       - tasks
@@ -206,35 +170,28 @@ paths:
           description: ""
           schema:
             $ref: '#/definitions/handler.errorResponse'
-      security:
-      - BasicAuth: []
       summary: Get task By Id
       tags:
       - tasks
-    put:
+  /api/telegram/{id}:
+    get:
       consumes:
       - application/json
-      description: update task
-      operationId: update-task
+      description: get all tasks
+      operationId: get-all-tasks
       parameters:
-      - description: Task ID
+      - description: telegram ID
         in: path
         name: id
         required: true
         type: integer
-      - description: task info
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/task_manager.UpdateTaskInput'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            type: string
+            $ref: '#/definitions/handler.getAllTasksResponse'
         "400":
           description: Bad Request
           schema:
@@ -251,12 +208,7 @@ paths:
           description: ""
           schema:
             $ref: '#/definitions/handler.errorResponse'
-      security:
-      - BasicAuth: []
-      summary: Update task
+      summary: Get All Tasks
       tags:
       - tasks
-securityDefinitions:
-  BasicAuth:
-    type: basic
 swagger: "2.0"
